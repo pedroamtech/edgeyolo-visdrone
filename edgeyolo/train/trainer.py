@@ -572,7 +572,12 @@ class Trainer(EdgeYOLO):
             self.save_ckpt(pth_save, **eval_msg)
             self.eval_data[self.now_epoch] = eval_msg
             yaml.dump(self.eval_data, open(self.eval_file, "w", encoding="utf8"))
-            self._wandb_log({"eval/ap50_95": float(ap50_95), "eval/ap50": float(ap50)}, step=self.now_epoch)
+            extra = getattr(self.evaluator, "extra_metrics", {})
+            self._wandb_log({
+                "eval/mAP_50":    float(ap50),
+                "eval/mAP_50_95": float(ap50_95),
+                **extra,
+            }, step=self.now_epoch)
 
     def evaluate_only(self, file_list=None, save=True):
         from glob import glob

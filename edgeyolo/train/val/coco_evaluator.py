@@ -8,6 +8,7 @@ import time
 from loguru import logger
 from tqdm import tqdm
 
+import numpy as np
 import torch
 
 from ...utils import (
@@ -247,6 +248,26 @@ class COCOEvaluator:
             with contextlib.redirect_stdout(redirect_string):
                 cocoEval.summarize()
             info += redirect_string.getvalue()
+
+            # precision: [T=10, R=101, K, A=4, M=3] — T0=IoU0.5, A0=all areas, M2=max100dets
+            p50 = cocoEval.eval['precision'][0, :, :, 0, 2]
+            valid_p = p50[p50 > -1]
+            precision = float(np.mean(valid_p)) if len(valid_p) > 0 else 0.0
+
+            # recall: [T=10, K, A=4, M=3]
+            r50 = cocoEval.eval['recall'][0, :, 0, 2]
+            valid_r = r50[r50 > -1]
+            recall = float(np.mean(valid_r)) if len(valid_r) > 0 else 0.0
+
+            f1 = float(2 * precision * recall / (precision + recall + 1e-16))
+
+            self.extra_metrics = {
+                "eval/precision": precision,
+                "eval/recall":    recall,
+                "eval/f1":        f1,
+            }
+
             return cocoEval.stats[0], cocoEval.stats[1], info
         else:
+            self.extra_metrics = {}
             return 0, 0, info
