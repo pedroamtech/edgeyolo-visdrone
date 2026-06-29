@@ -1,6 +1,6 @@
 # models & weights------------------------------------------------------------------------------------------------------
 model_cfg: "params/model/edgeyolo_tiny.yaml"         # model structure config file
-weights: "output/train/edgeyolo_tiny_coco/last.pth"  # contains model_cfg, set null or a no-exist filename if not use it
+weights: null                                        # train from scratch; replace with a .pth path to resume or fine-tune
 use_cfg: false                                       # force using model_cfg instead of cfg in weights to build model
 
 # output----------------------------------------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ loader_num_workers: 2                                # number data loader worker
 num_threads: 1                                       # pytorch threads number for each GPU
 
 # device & data type----------------------------------------------------------------------------------------------------
-device: [0, 1, 2, 3]                                 # training device list
+device: [0]                                          # training device list — add more GPUs if available e.g. [0, 1]
 fp16: false                                          # train with fp16 precision
 cudnn_benchmark: false                               # it's useful when multiscale_range is set zero
 

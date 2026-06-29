@@ -1,22 +1,22 @@
-type: "visdrone"
+type: "yolo"
 
-dataset_path: "/dataset/VisDrone2019-DET"
+dataset_path: "C:/Users/pedroam/Documents/Data-Augmentation/Datasets/VisDrone"
 
 kwargs:
   suffix: "jpg"
   use_cache: true
 
 train:
-  image_dir: "VisDrone2019-DET-train/images"
-  label: "VisDrone2019-DET-train/annotations"
+  image_dir: "train/images"
+  label: "train/labels"
 
 val:
-  image_dir: "VisDrone2019-DET-val/images"
-  label: "VisDrone2019-DET-val/annotations"
+  image_dir: "validation/images"
+  label: "validation/labels"
 
 test:
-  test_dir: "VisDrone2019-DET-test"
+  test_dir: "validation/images"
 
 segmentaion_enabled: false
 
-names: ['pedestrian', 'people', 'bicycle', 'car', 'van', 'truck', 'tricycle', 'awning-tricycle', 'bus', 'motor']
+names: ['persona', 'ignorar']
