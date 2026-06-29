@@ -380,6 +380,9 @@ class Trainer(EdgeYOLO):
 
             if self.rank == 0 and WANDB_AVAILABLE and self._wandb_cfg.get("enabled", False):
                 os.makedirs(self.params["output_dir"], exist_ok=True)
+                api_key = self._wandb_cfg.get("api_key", None)
+                if api_key:
+                    _wandb.login(key=api_key, relogin=True)
                 self._wandb_run = _wandb.init(
                     project=self._wandb_cfg.get("project", "edgeyolo"),
                     name=self._wandb_cfg.get("run_name", None),

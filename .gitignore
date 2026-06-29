@@ -1,0 +1,18 @@
+# Training configs with API keys — edit locally, never commit
+params/train/train_visdrone_base.yaml
+params/train/train_visdrone_aug.yaml
+
+# Training outputs
+output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pth
+*.pt
+
+# Dataset caches
+*.edgeyolo
+
+# wandb local files
+wandb/
