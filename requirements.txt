@@ -13,12 +13,10 @@ pandas
 pathlib
 pillow
 matplotlib
-mahotas
 seaborn
 scipy
 onnx
 onnxsim
-mahotas
 ###### tensorrt export #####
 # pycuda
 # tensorrt
