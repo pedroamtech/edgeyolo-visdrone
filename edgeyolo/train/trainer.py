@@ -1,3 +1,9 @@
+try:
+    import wandb as _wandb
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
+
 from .loss import YoloLoss, iou_loss, cls_loss, conf_loss
 from .optimizer import get_optimizer
 from .val import Evaluator, evaluators
@@ -99,6 +105,10 @@ class Trainer(EdgeYOLO):
         if osp.isfile(self.eval_file) and self.rank == 0:
             self.eval_data = yaml.load(open(self.eval_file, "r", encoding="utf8").read(), yaml.Loader)
             self.best_ap = max([self.eval_data[key]["ap50_95"] for key in self.eval_data])
+
+        self._wandb_cfg = params.get("wandb", {})
+        self._wandb_run = None
+        self._wandb_step_metrics = {}
 
         self.model.to(self.device)
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.params["fp16"])
@@ -297,6 +307,10 @@ class Trainer(EdgeYOLO):
         second_remain = second_used * iter_remain / iter_already
         return datetime.timedelta(seconds=int(second_remain))
 
+    def _wandb_log(self, metrics: dict, step: int = None):
+        if self._wandb_run is not None:
+            self._wandb_run.log(metrics, step=step)
+
     def update_print_data(self, **kwargs):
         self.print_data = {
             "epoch": "%d/%d" % (self.now_epoch + 1, self.max_epoch),
@@ -322,6 +336,10 @@ class Trainer(EdgeYOLO):
 
         eta = self.count_eta(time.time()-self.start_time)
         self.print_data["ETA"] = str(eta)
+
+        self._wandb_step_metrics = {"train/lr": kwargs.get("lr", 0)}
+        for k, v in losses.items():
+            self._wandb_step_metrics[f"train/{k}_loss"] = float(v)
 
     @property
     def progress_in_iter(self):
@@ -359,6 +377,17 @@ class Trainer(EdgeYOLO):
             if self.params["eval_at_start"]:
                 self.now_epoch = max(0, self.start_epoch - 1)
                 self.evaluate()
+
+            if self.rank == 0 and WANDB_AVAILABLE and self._wandb_cfg.get("enabled", False):
+                os.makedirs(self.params["output_dir"], exist_ok=True)
+                self._wandb_run = _wandb.init(
+                    project=self._wandb_cfg.get("project", "edgeyolo"),
+                    name=self._wandb_cfg.get("run_name", None),
+                    tags=self._wandb_cfg.get("tags", []),
+                    config={k: v for k, v in self.params.items() if k != "wandb"},
+                    dir=self.params["output_dir"],
+                    resume="allow",
+                )
 
             self.start_time = time.time()
 
@@ -456,6 +485,7 @@ class Trainer(EdgeYOLO):
                         # torch.cuda.empty_cache()
                         if self.rank == 0:
                             logger.info(iter_info)
+                            self._wandb_log(self._wandb_step_metrics, step=self.progress_in_iter)
 
                 before_iter()
                 train_in_iter()
@@ -491,6 +521,8 @@ class Trainer(EdgeYOLO):
                 logger.info("Training Finished.")
                 logger.info("Time Spent: %s" % str(datetime.timedelta(seconds=(time.time() - self.start_time))))
                 logger.info(f"best mAP_50:95 = {self.best_ap:.5f} at epoch {self.best_epoch + 1}.")
+                if self._wandb_run is not None:
+                    self._wandb_run.finish()
 
         if self.params["eval_only"]:
             self.evaluate_only()
@@ -537,6 +569,7 @@ class Trainer(EdgeYOLO):
             self.save_ckpt(pth_save, **eval_msg)
             self.eval_data[self.now_epoch] = eval_msg
             yaml.dump(self.eval_data, open(self.eval_file, "w", encoding="utf8"))
+            self._wandb_log({"eval/ap50_95": float(ap50_95), "eval/ap50": float(ap50)}, step=self.now_epoch)
 
     def evaluate_only(self, file_list=None, save=True):
         from glob import glob

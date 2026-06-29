@@ -17,6 +17,7 @@ seaborn
 scipy
 onnx
 onnxsim
+wandb
 ###### tensorrt export #####
 # pycuda
 # tensorrt
