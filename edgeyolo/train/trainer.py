@@ -524,6 +524,14 @@ class Trainer(EdgeYOLO):
                 logger.info("Training Finished.")
                 logger.info("Time Spent: %s" % str(datetime.timedelta(seconds=(time.time() - self.start_time))))
                 logger.info(f"best mAP_50:95 = {self.best_ap:.5f} at epoch {self.best_epoch + 1}.")
+                try:
+                    from ..utils.plot_fig import plot_all
+                    figures_dir = os.path.join(self.params["output_dir"], "figures")
+                    logger.info(f"Saving training plots to {figures_dir} ...")
+                    plot_all(self.params["output_dir"], show=False, save=True, suffix=["png", "pdf"])
+                    logger.info("Plots saved.")
+                except Exception as e:
+                    logger.warning(f"Could not generate plots: {e}")
                 if self._wandb_run is not None:
                     self._wandb_run.finish()
 
