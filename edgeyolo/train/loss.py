@@ -660,10 +660,22 @@ class YoloLoss(nn.Module):
 
         ious_in_boxes_matrix = pair_wise_ious
         n_candidate_k = min(10, ious_in_boxes_matrix.size(1))
+
+        # Guard: if no foreground anchors exist for this batch, return empty matches.
+        # This happens with very small or occluded objects where no anchor center
+        # falls inside or near any GT box. Without this guard, clamp(min=1) would
+        # produce k=1 but topk on an empty tensor triggers a CUDA device-side assert.
+        if n_candidate_k == 0:
+            return (
+                0,
+                gt_classes.new_empty(0),
+                pair_wise_ious.new_empty(0),
+                gt_classes.new_empty(0, dtype=torch.long),
+            )
+
         topk_ious, _ = torch.topk(ious_in_boxes_matrix, n_candidate_k, dim=1)
-        dynamic_ks = torch.clamp(topk_ious.sum(1).int(), min=1)
+        dynamic_ks = torch.clamp(topk_ious.sum(1).int(), min=1, max=n_candidate_k)
         for gt_idx in range(num_gt):
-            # TODO  CUDA error: device-side assert triggered
             _, pos_idx = torch.topk(
                 cost[gt_idx], k=dynamic_ks[gt_idx].item(), largest=False
             )
